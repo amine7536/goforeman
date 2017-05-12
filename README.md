@@ -39,38 +39,39 @@ func main() {
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
 			"admin",
-			"shhhhhhh",
+			"azerty",
 		},
 	}
 
-	f := goforeman.New(&client, "https://foremanserver.lab.local.dev")
+	foreman := goforeman.New(&client, "https://foremanserver.lab.local.dev")
 
 	ctx := context.TODO()
 
-	hosts, _, err := f.Hosts.List(ctx)
+	hosts, _, err := foreman.Hosts.List(ctx)
 	if err != nil {
-	 	log.Fatalln(err.Error())
+		log.Fatalln(err.Error())
 	}
 
 	for _, h := range hosts {
-		v, _, _ := f.Hosts.Get(ctx, h.Name)
+		v, _, _ := foreman.Hosts.Get(ctx, h.Name)
 		if err != nil {
 			log.Fatalln(err.Error())
 		}
 		fmt.Println(v)
 	}
 
-	d, _, err := f.Dashboard.Get(ctx)
+	d, _, err := foreman.Dashboard.Get(ctx)
 	if err != nil {
 		log.Fatalf("Error: %s", err.Error())
 	}
 	fmt.Println(d)
 
-	facts, _, err := f.Facts.Get(ctx, "foremanserver.lab.local.dev")
+	facts, _, err := foreman.Facts.Get(ctx, "foremanserver.lab.local.dev")
 	if err != nil {
 		log.Fatalf("Error: %s", err.Error())
 	}
 	fmt.Println(facts)
 
 }
+
 ```
