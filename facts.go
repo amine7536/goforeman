@@ -12,7 +12,7 @@ type FactsService interface {
 	Get(context.Context, string) (Facts, *Response, error)
 }
 
-type Facts map[string]interface{}
+type Facts map[string]map[string]interface{}
 
 type rootFacts struct {
 	Facts Facts `json:"results"`

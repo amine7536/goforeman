@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/amine7536/goforeman"
 )
@@ -33,17 +34,21 @@ func (t AuthTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func main() {
 
+	foremanURL := os.Getenv("FOREMAN_URL")
+	foremanUser := os.Getenv("FOREMAN_USER")
+	foremanPassword := os.Getenv("FOREMAN_PASSWORD")
+
 	client := http.Client{
 		Transport: AuthTransport{
 			&http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
-			"admin",
-			"azerty",
+			foremanUser,
+			foremanPassword,
 		},
 	}
 
-	foreman := goforeman.New(&client, "https://foremanserver.lab.local.dev")
+	foreman := goforeman.New(&client, foremanURL)
 
 	ctx := context.TODO()
 
@@ -73,5 +78,4 @@ func main() {
 	fmt.Println(facts)
 
 }
-
 ```
