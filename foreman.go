@@ -3,7 +3,9 @@ package goforeman
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -27,6 +29,30 @@ type RequestCompletionCallback func(*http.Request, *http.Response)
 
 type Response struct {
 	*http.Response
+	Meta *ResponseMeta
+}
+
+type ResponseMeta struct {
+	Total    int `json:"total,omiempty"`
+	SubTotal int `json:"subtotal,omiempty"`
+	Page     int `json:"page,omiempty"`
+	PerPage  int `json:"per_page,omiempty"`
+}
+
+// An ErrorResponse reports the error caused by an API request
+type ErrorResponse struct {
+	// HTTP response that caused this error
+	Response *http.Response
+
+	// Error message
+	Message string `json:"message"`
+}
+
+// ListOptions
+type ListOptions struct {
+	Page          int    `json:"page,omitempty"`
+	PerPage       int    `json:"per_page,omitempty"`
+	EnvironmentID string `json:"environment_id,omitempty"`
 }
 
 func New(httpClient *http.Client, apiUrl string) *Client {
@@ -68,11 +94,16 @@ func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body int
 		return nil, err
 	}
 
+	req.Header.Add("content-type", "application/json")
+
 	return req, nil
 }
 
 func newResponse(r *http.Response) *Response {
-	return &Response{Response: r}
+	response := &Response{
+		Response: r,
+	}
+	return response
 }
 
 // Do sends an API request and returns the API response. The API response is JSON decoded and stored in the value
@@ -95,7 +126,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 
 	response := newResponse(resp)
 
-	// err = CheckResponse(resp)
+	err = CheckResponse(resp)
 	if err != nil {
 		return response, err
 	}
@@ -115,4 +146,28 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 	}
 
 	return response, err
+}
+
+// CheckResponse checks the API response for errors, and returns them if present. A response is considered an
+// error if it has a status code outside the 200 range. API error responses are expected to have either no response
+// body, or a JSON response body that maps to ErrorResponse. Any other response body will be silently ignored.
+func CheckResponse(r *http.Response) error {
+	if c := r.StatusCode; c >= 200 && c <= 299 {
+		return nil
+	}
+
+	errorResponse := &ErrorResponse{Response: r}
+	data, err := ioutil.ReadAll(r.Body)
+	if err == nil && len(data) > 0 {
+		err := json.Unmarshal(data, errorResponse)
+		if err != nil {
+			return err
+		}
+	}
+
+	return errorResponse
+}
+
+func (r *ErrorResponse) Error() string {
+	return fmt.Sprintf("%v %v: %d %v", r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
 }

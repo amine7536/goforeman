@@ -9,7 +9,7 @@ import (
 const factsBasePath = "api/hosts"
 
 type FactsService interface {
-	Get(context.Context, string) (Facts, *Response, error)
+	Get(context.Context, string, *ListOptions) (Facts, *Response, error)
 }
 
 type Facts map[string]map[string]interface{}
@@ -24,24 +24,29 @@ type FactsServiceOp struct {
 
 var _ FactsService = &FactsServiceOp{}
 
-// func (d Facts) String() string {
-// 	return Stringify(d)
-// }
-
-func (s *FactsServiceOp) Get(ctx context.Context, hostname string) (Facts, *Response, error) {
-
+func (s *FactsServiceOp) Get(ctx context.Context, hostname string, opt *ListOptions) (Facts, *Response, error) {
+	fmt.Println(opt)
 	path := fmt.Sprintf("%s/%s/facts", factsBasePath, hostname)
 
-	req, err := s.client.NewRequest(ctx, "GET", path, nil)
+	req, err := s.client.NewRequest(ctx, "GET", path, opt)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	v := new(rootFacts)
-	resp, err := s.client.Do(ctx, req, v)
+	type respWithMeta struct {
+		rootFacts
+		ResponseMeta
+	}
+
+	root := new(respWithMeta)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return v.Facts, resp, nil
+	if m := &root.ResponseMeta; m != nil {
+		resp.Meta = m
+	}
+
+	return root.Facts, resp, nil
 }

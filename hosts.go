@@ -9,7 +9,7 @@ import (
 const hostBasePath = "api/hosts"
 
 type HostsService interface {
-	List(context.Context) ([]Host, *Response, error)
+	List(context.Context, *ListOptions) ([]Host, *Response, error)
 	Get(context.Context, string) (*Host, *Response, error)
 }
 
@@ -100,19 +100,28 @@ func (h Host) String() string {
 	return Stringify(h)
 }
 
-func (s *HostsServiceOp) List(ctx context.Context) ([]Host, *Response, error) {
-	req, err := s.client.NewRequest(ctx, "GET", hostBasePath, nil)
+func (s *HostsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Host, *Response, error) {
+	req, err := s.client.NewRequest(ctx, "GET", hostBasePath, opt)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	v := new(hostsRoot)
-	resp, err := s.client.Do(ctx, req, v)
+	type respWithMeta struct {
+		hostsRoot
+		ResponseMeta
+	}
+
+	root := new(respWithMeta)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return v.Hosts, resp, nil
+	if m := &root.ResponseMeta; m != nil {
+		resp.Meta = m
+	}
+
+	return root.Hosts, resp, nil
 }
 
 func (s *HostsServiceOp) Get(ctx context.Context, hostname string) (*Host, *Response, error) {
