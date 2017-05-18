@@ -25,7 +25,6 @@ type FactsServiceOp struct {
 var _ FactsService = &FactsServiceOp{}
 
 func (s *FactsServiceOp) Get(ctx context.Context, hostname string, opt *ListOptions) (Facts, *Response, error) {
-	fmt.Println(opt)
 	path := fmt.Sprintf("%s/%s/facts", factsBasePath, hostname)
 
 	req, err := s.client.NewRequest(ctx, "GET", path, opt)
